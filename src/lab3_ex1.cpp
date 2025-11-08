@@ -149,16 +149,14 @@ void loop()
         Serial.println("LOL, WiFi disconnected. Let me try again ...");
         connectWifi();
     }
-    delay(50);  
-
-
+    
     if (!mqtt_client.connected()) {
         Serial.println("LOL, MQTT disconnected. Let me fix it ...");
         connectMQTT();
     }
     mqtt_client.loop();
 
-    delay(50);
+    delay(10);
 
 }
 

@@ -19,6 +19,7 @@ const char* mqtt_password = "mqttpass";
 WiFiClient espClient;
 PubSubClient mqtt_client(espClient);
 
+
 void connectWifi() {
     Serial.println("I'm about to connect to Wifi so,  wait ....");
     WiFi.begin(ssid, password);
@@ -29,6 +30,27 @@ void connectWifi() {
     Serial.println("\n  Here we are! Connected to WiFi!");
     Serial.print("IP Address: ");
     Serial.println(WiFi.localIP());
+}
+
+
+
+void connectMQTT() {
+    while (!mqtt_client.connected()) {
+        Serial.println("CI'm about to connect to MQTT so, wait ...");
+        String client_id = "esp32-" + String(random(0xffff), HEX);
+        if (mqtt_client.connect(client_id.c_str(), mqtt_username, mqtt_password)) {
+            Serial.println("Here we are! Connected to MQTT Broker!");
+            mqtt_client.subscribe("ttpu/iot/abdulaziz/led/red");
+            mqtt_client.subscribe("ttpu/iot/abdulaziz/led/green");
+            mqtt_client.subscribe("ttpu/iot/abdulaziz/led/blue");
+            mqtt_client.subscribe("ttpu/iot/abdulaziz/led/yellow");
+        } else {
+            Serial.print("LOL, MQTT Broker disconnected. Let me fix it ..., rc=");
+            Serial.print(mqtt_client.state());
+            Serial.println(" try again in 2 seconds");
+            delay(2000);
+        }
+    }
 }
 
 void mqttCallback(char* topic, byte* payload, unsigned int length) {
@@ -64,25 +86,6 @@ void mqttCallback(char* topic, byte* payload, unsigned int length) {
     }
 }
 
-void connectMQTT() {
-    while (!mqtt_client.connected()) {
-        Serial.println("CI'm about to connect to MQTT so, wait ...");
-        String client_id = "esp32-" + String(random(0xffff), HEX);
-        if (mqtt_client.connect(client_id.c_str(), mqtt_username, mqtt_password)) {
-            Serial.println("Here we are! Connected to MQTT Broker!");
-            mqtt_client.subscribe("ttpu/iot/abdulaziz/led/red");
-            mqtt_client.subscribe("ttpu/iot/abdulaziz/led/green");
-            mqtt_client.subscribe("ttpu/iot/abdulaziz/led/blue");
-            mqtt_client.subscribe("ttpu/iot/abdulaziz/led/yellow");
-        } else {
-            Serial.print("LOL, MQTT Broker disconnected. Let me fix it ..., rc=");
-            Serial.print(mqtt_client.state());
-            Serial.println(" try again in 2 seconds");
-            delay(2000);
-        }
-    }
-}
-
 void setup() {
     Serial.begin(115200);
     pinMode(RED_LED_PIN, OUTPUT);
@@ -99,6 +102,8 @@ void setup() {
     connectMQTT();
 }
 
+
+
 void loop() {
     if (WiFi.status() != WL_CONNECTED) {
         connectWifi();
@@ -107,5 +112,5 @@ void loop() {
         connectMQTT();
     }
     mqtt_client.loop();
-    delay(50);
+    delay(10);
 }
