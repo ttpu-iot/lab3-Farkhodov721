@@ -23,12 +23,34 @@
 // Your code here - global declarations
 
 
+const char* ssid = "Wokwi-GUEST";
+const char* password = "";
+
+
+const char* mqtt_broker  = "mqtt.oitserver.uz";
+const int mqtt_port = 1883;
+const char* mqtt_username = "userTTPU";
+const char* mqtt_password = "mqttpass";
+
+
+const int LIGHT_PIN = 33;
+const int BUTTON_PIN = 25;
+
+
+unsigned long lastPublishTime = 0;
+const long publishInterval = 5000;
+
+
+
 
 /*************************
  * SETUP
  */
 void setup()
 {
+
+    Serial.begin(1152000);
+    pinMode(BUTTON_PIN, INPUT);
 
 }
 
