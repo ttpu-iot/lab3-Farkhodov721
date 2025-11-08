@@ -42,15 +42,40 @@ const long publishInterval = 5000;
 
 
 
+void connectWifi(){
+    Serial.println("\nI'm about to connect to Wifi so,  wait ...");
+    WiFi.mode(WIFI_STA);
+    WiFi.begin(ssid, password);  
+    
+    int attempts = 0;
+    while (WiFi.status() != WL_CONNECTED && attempts < 20) {
+        delay(500);
+        Serial.print(".");  
+        attempts++;
+    }
+
+
+    if (WiFi.status() == WL_CONNECTED) {
+        Serial.println("\nHere we are! Connected to WiFi!");
+        Serial.print("IP Address: ");
+        Serial.println(WiFi.localIP());
+    } else {
+        Serial.println("\nFailed to connect to WiFi.");
+    }
+}
+
 
 /*************************
  * SETUP
  */
 void setup()
 {
-
     Serial.begin(1152000);
+    delay(1000);
     pinMode(BUTTON_PIN, INPUT);
+
+    Serial.println("I'm about to connect to Wifi so,  wait ....");
+    connectWifi();
 
 }
 
@@ -60,6 +85,12 @@ void setup()
  */
 void loop() 
 {
+
+    if (WiFi.status() != WL_CONNECTED) {
+        Serial.println("LOL, WiFi disconnected. Let me try again...");
+        connectWifi();
+    }
+    delay(1000);  
 
 }
 
