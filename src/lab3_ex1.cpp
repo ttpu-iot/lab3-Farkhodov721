@@ -27,7 +27,7 @@ const char* ssid = "Wokwi-GUEST";
 const char* password = "";
 
 
-const char* mqtt_broker  = "mqtt.oitserver.uz";
+const char* mqtt_broker  = "mqtt.iotserver.uz";
 const int mqtt_port = 1883;
 const char* mqtt_username = "userTTPU";
 const char* mqtt_password = "mqttpass";
