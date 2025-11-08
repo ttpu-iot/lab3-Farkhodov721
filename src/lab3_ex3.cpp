@@ -2,10 +2,22 @@
 #include "WiFi.h"
 #include <ArduinoJson.h>
 #include "PubSubClient.h"
+#include <Wire.h>
+#include <hd44780.h>
+#include <hd44780ioClass/hd44780_I2Cexp.h>
 
 // Pin definitions
 #define LIGHT_PIN 33
 #define BUTTON_PIN 25
+#define RED_LED_PIN 26
+#define GREEN_LED_PIN 27
+#define BLUE_LED_PIN 14
+#define YELLOW_LED_PIN 12
+
+// LCD object
+hd44780_I2Cexp lcd;
+const int LCD_COLS = 16;
+const int LCD_ROWS = 2;
 
 const char* ssid = "Wokwi-GUEST";
 const char* password = "";
@@ -44,11 +56,10 @@ void connectMQTT() {
     String client_id = "esp32-" + String(random(0xffff), HEX);
     if (mqtt_client.connect(client_id.c_str(), mqtt_username, mqtt_password)) {
       Serial.println("Connected to MQTT broker!");
-      // Subscribe to LED topics here if needed for full ex3
-      // mqtt_client.subscribe("ttpu/iot/abdulaziz/led/red");
-      // mqtt_client.subscribe("ttpu/iot/abdulaziz/led/green");
-      // mqtt_client.subscribe("ttpu/iot/abdulaziz/led/blue");
-      // mqtt_client.subscribe("ttpu/iot/abdulaziz/led/yellow");
+      mqtt_client.subscribe("ttpu/iot/abdulaziz/led/red");
+      mqtt_client.subscribe("ttpu/iot/abdulaziz/led/green");
+      mqtt_client.subscribe("ttpu/iot/abdulaziz/led/blue");
+      mqtt_client.subscribe("ttpu/iot/abdulaziz/led/yellow");
     } else {
       Serial.print("Failed, rc=");
       Serial.print(mqtt_client.state());
@@ -58,13 +69,69 @@ void connectMQTT() {
   }
 }
 
+void mqttCallback(char* topic, byte* payload, unsigned int length) {
+  String message;
+  for (unsigned int i = 0; i < length; i++) {
+    message += (char)payload[i];
+  }
+  StaticJsonDocument<128> doc;
+  DeserializationError error = deserializeJson(doc, message);
+  if (error) {
+    Serial.print("JSON parse failed: ");
+    Serial.println(error.c_str());
+    return;
+  }
+  String state = doc["state"];
+  unsigned long timestamp = time(NULL);
+
+  // Display on Serial Monitor
+  Serial.print("Received on topic: ");
+  Serial.println(topic);
+  Serial.print("Message: ");
+  Serial.println(message);
+
+  // Display on LCD
+  lcd.clear();
+  lcd.setCursor(0, 0);
+  lcd.print("Topic:");
+  lcd.print(String(topic).substring(20)); // Display only the LED color
+  lcd.setCursor(0, 1);
+  lcd.print("State:");
+  lcd.print(state);
+
+  // Control LEDs
+  if (String(topic).endsWith("red")) digitalWrite(RED_LED_PIN, state == "ON" ? HIGH : LOW);
+  if (String(topic).endsWith("green")) digitalWrite(GREEN_LED_PIN, state == "ON" ? HIGH : LOW);
+  if (String(topic).endsWith("blue")) digitalWrite(BLUE_LED_PIN, state == "ON" ? HIGH : LOW);
+  if (String(topic).endsWith("yellow")) digitalWrite(YELLOW_LED_PIN, state == "ON" ? HIGH : LOW);
+}
+
 void setup()
 {
   Serial.begin(115200);
   pinMode(LIGHT_PIN, INPUT);
   pinMode(BUTTON_PIN, INPUT);
+  pinMode(RED_LED_PIN, OUTPUT);
+  pinMode(GREEN_LED_PIN, OUTPUT);
+  pinMode(BLUE_LED_PIN, OUTPUT);
+  pinMode(YELLOW_LED_PIN, OUTPUT);
+  digitalWrite(RED_LED_PIN, LOW);
+  digitalWrite(GREEN_LED_PIN, LOW);
+  digitalWrite(BLUE_LED_PIN, LOW);
+  digitalWrite(YELLOW_LED_PIN, LOW);
+
+  // Initialize LCD
+  if (lcd.begin(LCD_COLS, LCD_ROWS)) {
+    Serial.println("LCD initialization failed!");
+    while (1);
+  }
+  lcd.print("MQTT Ready!");
+  delay(2000);
+  lcd.clear();
+
   connectWifi();
   mqtt_client.setServer(mqtt_broker, mqtt_port);
+  mqtt_client.setCallback(mqttCallback);
   connectMQTT();
 }
 
@@ -103,5 +170,5 @@ void loop()
     connectMQTT();
   }
   mqtt_client.loop();
-  delay(50);
+  delay(10);
 }
