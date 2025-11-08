@@ -44,6 +44,9 @@ const int BUTTON_PIN = 25;
 unsigned long lastPublishTime = 0;
 const long publishInterval = 5000;
 
+int lastButtonState = LOW;
+unsigned long lastDebounceTime = 0;
+const unsigned long debounceDelay = 50;
 
 WiFiClient espClient;  
 PubSubClient mqtt_client(espClient);
@@ -93,7 +96,7 @@ void connectMQTT(){
  */
 void setup()
 {
-    Serial.begin(1152000);
+    Serial.begin(115200);
     delay(1000);
     pinMode(BUTTON_PIN, INPUT);
 
@@ -112,12 +115,42 @@ void setup()
  */
 void loop() 
 {
+    int reading = digitalRead(BUTTON_PIN);
+    if (reading != lastButtonState) {
+        lastDebounceTime = millis();
+    }
+
+
+    if ((millis() - lastDebounceTime) > debounceDelay) {
+        if (reading != lastButtonState) {
+            lastButtonState = reading;
+            unsigned long timestamp = time(NULL);
+
+            String eventType = (reading == HIGH) ? "pressed" : "released";
+            String payload = "{ \"event\": \"" + eventType + "\", \"timestamp\": " + String(timestamp) + " }";
+
+            mqtt_client.publish(topic_button, payload.c_str());
+        }
+    }
+
+
+    unsigned long currentTime = millis();
+    if (currentTime - lastPublishTime >= publishInterval) {
+        int lightValue = analogRead(LIGHT_PIN);
+        unsigned long timestamp = time(NULL);
+
+        String payload = "{ \"light\": " + String(lightValue) + ", \"timestamp\": " + String(timestamp) + " }";
+        mqtt_client.publish(topic_light, payload.c_str());
+
+        lastPublishTime = currentTime;
+   }
 
     if (WiFi.status() != WL_CONNECTED) {
         Serial.println("LOL, WiFi disconnected. Let me try again ...");
         connectWifi();
     }
-    delay(1000);  
+    delay(50);  
+
 
     if (!mqtt_client.connected()) {
         Serial.println("LOL, MQTT disconnected. Let me fix it ...");
@@ -125,7 +158,7 @@ void loop()
     }
     mqtt_client.loop();
 
-    delay(1000);
+    delay(50);
 
 }
 
