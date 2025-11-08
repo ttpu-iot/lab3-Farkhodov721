@@ -33,6 +33,10 @@ const char* mqtt_username = "userTTPU";
 const char* mqtt_password = "mqttpass";
 
 
+const char* topic_light = "ttpu/iot/abdulaziz/sensors/light";
+const char* topic_button = "ttpu/iot/abdulaziz/events/button";
+
+
 const int LIGHT_PIN = 33;
 const int BUTTON_PIN = 25;
 
@@ -41,6 +45,8 @@ unsigned long lastPublishTime = 0;
 const long publishInterval = 5000;
 
 
+WiFiClient espClient;  
+PubSubClient mqtt_client(espClient);
 
 void connectWifi(){
     Serial.println("\nI'm about to connect to Wifi so,  wait ...");
@@ -60,10 +66,27 @@ void connectWifi(){
         Serial.print("IP Address: ");
         Serial.println(WiFi.localIP());
     } else {
-        Serial.println("\nFailed to connect to WiFi.");
+        Serial.println("\nLOL, WiFi disconnected. Let me try again ...");
     }
 }
 
+
+void connectMQTT(){
+    while(!mqtt_client.connected()){
+        Serial.println("CI'm about to connect to MQTT so, wait ...");
+
+        String client_id ="esp32-" + String(random(0xffff), HEX);
+
+        if (mqtt_client.connect(client_id.c_str(), mqtt_username, mqtt_password )) {
+            Serial.println("Here we are! Connected to MQTT Broker!");
+        } else {
+            Serial.print("LOL, MQTT Broker disconnected. Let me fix it ..., rc=");
+            Serial.print(mqtt_client.state());
+            Serial.println(" try again in 2 seconds");
+            delay(2000);
+        }
+    }
+}
 
 /*************************
  * SETUP
@@ -77,6 +100,10 @@ void setup()
     Serial.println("I'm about to connect to Wifi so,  wait ....");
     connectWifi();
 
+    Serial.println("I'm setting up MQTT so, wait ....");
+    mqtt_client.setServer(mqtt_broker, mqtt_port);
+    connectMQTT();
+
 }
 
 
@@ -87,10 +114,18 @@ void loop()
 {
 
     if (WiFi.status() != WL_CONNECTED) {
-        Serial.println("LOL, WiFi disconnected. Let me try again...");
+        Serial.println("LOL, WiFi disconnected. Let me try again ...");
         connectWifi();
     }
     delay(1000);  
+
+    if (!mqtt_client.connected()) {
+        Serial.println("LOL, MQTT disconnected. Let me fix it ...");
+        connectMQTT();
+    }
+    mqtt_client.loop();
+
+    delay(1000);
 
 }
 
